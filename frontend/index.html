@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chatbot Demo</title>
+    <style>
+        body {
+        font-family: "Segoe UI", sans-serif;
+        background: #f6f8fa;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0;
+        padding: 20px;
+        }
+        h1 {
+        margin-bottom: 10px;
+        }
+        #chat-box {
+        width: 100%;
+        max-width: 500px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        padding: 15px;
+        overflow-y: auto;
+        height: 400px;
+        margin-bottom: 15px;
+        }
+        .msg {
+        margin: 8px 0;
+        line-height: 1.4;
+        }
+        .user {
+        text-align: right;
+        color: #0366d6;
+        }
+        .bot {
+        text-align: left;
+        color: #24292e;
+        }
+        #input-area {
+        display: flex;
+        width: 100%;
+        max-width: 500px;
+        }
+        #question {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 15px;
+        }
+        button {
+        margin-left: 8px;
+        padding: 10px 16px;
+        border: none;
+        background: #0366d6;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        }
+        button:hover {
+        background: #0254b3;
+        }
+    </style>
+    </head>
+    <body>
+    <h1>Chatbot Demo</h1>
+    <div id="chat-box"></div>
+
+    <div id="input-area">
+        <input type="text" id="question" placeholder="Escribe tu pregunta..." />
+        <button onclick="sendMessage()">Enviar</button>
+    </div>
+
+    <script>
+    async function sendMessage() {
+        const input = document.getElementById("question");
+        const chatBox = document.getElementById("chat-box");
+        const question = input.value.trim();
+        if (!question) return;
+
+        // Mostrar mensaje del usuario
+        chatBox.innerHTML += `<div class="msg user">🧑‍💬 ${question}</div>`;
+        input.value = "";
+
+        try {
+        const response = await fetch("http://127.0.0.1:8000/ask", {
+            method: "POST",
+            headers: {
+            "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ client: "gyudon_shop", question }),
+
+        });
+        const data = await response.json();
+
+        // Mostrar respuesta del bot
+        chatBox.innerHTML += `<div class="msg bot">🤖 ${data.answer}</div>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        } catch (error) {
+        chatBox.innerHTML += `<div class="msg bot">⚠️ Connection error</div>`;
+        }
+    }
+
+    // 👇 ESTE BLOQUE VA FUERA de la función sendMessage()
+    document.getElementById("question").addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+        event.preventDefault(); // evita salto de línea
+        sendMessage();
+        }
+    });
+    </script>
+
+</body>
+</html>
