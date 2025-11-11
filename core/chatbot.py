@@ -7,10 +7,11 @@ from core.utils import log_conversation
 from core.state import get_state, update_state, clear_state
 from core.reservations import save_reservation
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Cargar variables del entorno y configurar API
 load_dotenv()
 key = os.getenv("GEMINI_API_KEY")
-print("Usando GEMINI_API_KEY:", key)
 
 genai.configure(api_key=key)
 
@@ -30,7 +31,7 @@ def detect_language(text: str) -> str:
 
 def load_information(client: str) -> str:
     """Carga los archivos de datos (menu, schedule, faq) del cliente indicado."""
-    base_path = f"clients/{client}/data"
+    base_path = os.path.join(BASE_DIR, "clients", client, "data")
     if not os.path.exists(base_path):
         return f"No se encontró información para el cliente '{client}'."
 
