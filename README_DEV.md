@@ -6,8 +6,8 @@ venv\Scripts\activate
 2️⃣ Ejecutar el servidor FastAPI
 uvicorn app.main:app --reload --port 8000
 
-3️⃣ Abrir ngrok (para exponer el puerto 8000)
-ngrok http 8000
+3️⃣ Abrir la carpeta donde está ngrok (para exponer el puerto 8000)
+./ngrok http 8000
 
 
 Copia la URL HTTPS que aparezca (ej. https://abcd.ngrok-free.dev)

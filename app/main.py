@@ -4,6 +4,12 @@ from pydantic import BaseModel
 from core.chatbot import ask_bot
 from core.utils import reset_log_if_needed
 import os, hmac, hashlib, base64, json, httpx
+from core.reservations import (
+    start_reservation_flow_jp,
+    continue_reservation_flow_jp,
+    is_user_in_reservation_flow,
+)
+
 
 # Reiniciar log al arrancar el servidor
 reset_log_if_needed()
@@ -34,6 +40,8 @@ async def ask(data: Question):
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
+RESERVATION_TRIGGER = "予約"  # ← pon aquí EXACTAMENTE el texto del botón
+
 
 def verify_line_signature(body: bytes, signature: str) -> bool:
     mac = hmac.new(LINE_CHANNEL_SECRET.encode(), body, hashlib.sha256).digest()
@@ -55,15 +63,31 @@ async def line_webhook(request: Request):
             if event.get("type") == "message" and event["message"]["type"] == "text":
                 reply_token = event["replyToken"]
                 user_text = event["message"]["text"]
+                # userId を取得（1:1チャット前提）
+                user_id = event["source"].get("userId")
 
-                # 🔥 Aquí usamos tu lógica real
-                try:
-                    # Por ahora lo fijamos a gyudon_shop (luego lo haremos dinámico)
-                    answer = ask_bot("gyudon_shop", user_text)
-                except Exception as e:
-                    print("Error en ask_bot:", e)
-                    answer = "Lo siento, hubo un error interno 😢"
+                # Por ahora, el cliente lo fijamos a gyudon_shop
+                client_name = "gyudon_shop"
 
+                # Decidimos qué responder
+                # 1) Si el texto viene del botón de reserva → iniciar flujo
+                if user_text.strip() == RESERVATION_TRIGGER and user_id:
+                    reply_text = start_reservation_flow_jp(user_id, client_name)
+
+                # 2) Si el usuario ya está en el flujo de reserva → continuar
+                elif user_id and is_user_in_reservation_flow(user_id):
+                    reply_text = continue_reservation_flow_jp(user_id, user_text)
+
+                # 3) Si no es reserva → chatbot normal
+                else:
+                    try:
+                        answer = ask_bot(client_name, user_text)
+                    except Exception as e:
+                        print("Error en ask_bot:", e)
+                        answer = "申し訳ありません。内部エラーが発生しました。"
+                    reply_text = answer
+
+                # Enviar respuesta a LINE
                 await client.post(
                     "https://api.line.me/v2/bot/message/reply",
                     headers={
@@ -72,8 +96,9 @@ async def line_webhook(request: Request):
                     },
                     json={
                         "replyToken": reply_token,
-                        "messages": [{"type": "text", "text": answer}],
+                        "messages": [{"type": "text", "text": reply_text}],
                     },
                 )
+
 
     return {"status": "ok"}
