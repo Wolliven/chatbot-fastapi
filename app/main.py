@@ -40,7 +40,40 @@ async def ask(data: Question):
 
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET", "")
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN", "")
+LINE_OWNER_GROUP_ID = os.getenv("LINE_OWNER_GROUP_ID", "")
 RESERVATION_TRIGGER = "予約"  # ← pon aquí EXACTAMENTE el texto del botón
+
+async def notify_owner_of_reservation(http_client, reservation: dict):
+    """
+    Envía un push message al grupo del propietario con la info de la reserva.
+    """
+    if not LINE_OWNER_GROUP_ID:
+        print("LINE_OWNER_GROUP_ID no está configurado; no se enviará notificación al dueño.")
+        return
+
+    text = (
+        "📩 新しい予約リクエストがあります\n"
+        f"店舗: {reservation.get('client', '不明')}\n"
+        f"予約ID: {reservation.get('id')}\n"
+        f"日付: {reservation.get('date')}\n"
+        f"時間: {reservation.get('time')}\n"
+        f"人数: {reservation.get('people')}\n"
+        f"ユーザーID: {reservation.get('user_id')}\n"
+        "\n問題がある場合は、お客様にご連絡ください。"
+    )
+
+    await http_client.post(
+        "https://api.line.me/v2/bot/message/push",
+        headers={
+            "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "to": LINE_OWNER_GROUP_ID,
+            "messages": [{"type": "text", "text": text}],
+        },
+    )
+
 
 
 def verify_line_signature(body: bytes, signature: str) -> bool:
@@ -76,7 +109,15 @@ async def line_webhook(request: Request):
 
                 # 2) Si el usuario ya está en el flujo de reserva → continuar
                 elif user_id and is_user_in_reservation_flow(user_id):
-                    reply_text = continue_reservation_flow_jp(user_id, user_text)
+                    reply_text, reservation = continue_reservation_flow_jp(user_id, user_text)
+
+                    # Si se ha creado una reserva nueva (confirmada), notificamos al dueño
+                    if reservation is not None:
+                        try:
+                            await notify_owner_of_reservation(client, reservation)
+                        except Exception as e:
+                            print("Error enviando notificación al dueño:", e)
+
 
                 # 3) Si no es reserva → chatbot normal
                 else:
