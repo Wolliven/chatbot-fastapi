@@ -10,6 +10,12 @@ from core.reservations import (
     is_user_in_reservation_flow,
 )
 
+import os, hmac, hashlib, base64, json, httpx
+from dotenv import load_dotenv  # 👈 añade esto
+
+load_dotenv()  # 👈 carga el .env desde el directorio actual
+
+
 
 # Reiniciar log al arrancar el servidor
 reset_log_if_needed()
@@ -93,6 +99,8 @@ async def line_webhook(request: Request):
 
     async with httpx.AsyncClient() as client:
         for event in events:
+            #Cada vez que se quiera añadir un grupo, poner aquí esta línea
+            #print(json.dumps(event, ensure_ascii=False, indent=2))
             if event.get("type") == "message" and event["message"]["type"] == "text":
                 reply_token = event["replyToken"]
                 user_text = event["message"]["text"]

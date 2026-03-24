@@ -67,7 +67,7 @@ def ask_bot(client: str, question: str) -> str:
         # ------------------------------------------------------------------
 
         prompt = f"""
-Siempre responde en japonés natural y cortés.
+Siempre responde en el idioma en el que te escriben, natural y cortés.
 Eres un asistente para el negocio '{client}'.
 
 Usa solo la siguiente información para responder con precisión.

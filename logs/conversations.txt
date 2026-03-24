@@ -1,14 +1,20 @@
-[Session started: 2025-11-11 12:05:32]
+[Session started: 2026-03-24 12:22:14]
 
-[2025-11-11 12:05:50]
-Q: [gyudon_shop] Hola, qué tenéis en el menú?
-A: こんにちは！当店のメニューは以下の通りでございます。
+[2026-03-24 12:22:24]
+Q: [gyudon_shop] Good morning!
+A: Good morning! Welcome to gyudon_shop. How can I assist you today?
 
-*   牛丼：650円
-*   カツ丼：780円
-*   カレーライス：700円
-*   味噌汁：150円
-*   定食：950円
+[2026-03-24 12:22:36]
+Q: [gyudon_shop] Buenos días!
+A: ¡Buenos días!
 
-ご来店を心よりお待ちしております。
+Bienvenido/a a gyudon_shop. ¿En qué puedo ayudarte hoy?
+
+[2026-03-24 12:22:57]
+Q: [gyudon_shop] Quiero hacer una reserva
+A: Hola, gracias por contactarnos.
+
+Revisando la información de la que dispongo, no encuentro detalles sobre la posibilidad de hacer reservas en nuestro establecimiento. Lamento no poder ayudarte con eso en este momento.
+
+¡Esperamos verte pronto!
 
