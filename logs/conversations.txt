@@ -1,20 +1,2 @@
-[Session started: 2026-03-24 12:22:14]
-
-[2026-03-24 12:22:24]
-Q: [gyudon_shop] Good morning!
-A: Good morning! Welcome to gyudon_shop. How can I assist you today?
-
-[2026-03-24 12:22:36]
-Q: [gyudon_shop] Buenos días!
-A: ¡Buenos días!
-
-Bienvenido/a a gyudon_shop. ¿En qué puedo ayudarte hoy?
-
-[2026-03-24 12:22:57]
-Q: [gyudon_shop] Quiero hacer una reserva
-A: Hola, gracias por contactarnos.
-
-Revisando la información de la que dispongo, no encuentro detalles sobre la posibilidad de hacer reservas en nuestro establecimiento. Lamento no poder ayudarte con eso en este momento.
-
-¡Esperamos verte pronto!
+[Session started: 2026-03-25 23:11:35]
 

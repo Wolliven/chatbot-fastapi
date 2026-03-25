@@ -1,11 +1,8 @@
 import os
 import re
-import json
 import google.generativeai as genai
 from dotenv import load_dotenv
 from core.utils import log_conversation
-from core.state import get_state, update_state, clear_state
-from core.reservations import save_reservation
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -67,7 +64,7 @@ def ask_bot(client: str, question: str) -> str:
         # ------------------------------------------------------------------
 
         prompt = f"""
-Siempre responde en el idioma en el que te escriben, natural y cortés.
+Siempre responde en japonés, natural y cortés, a no ser que te escriban en otro idioma, en cuyo caso responde en ese idioma.
 Eres un asistente para el negocio '{client}'.
 
 Usa solo la siguiente información para responder con precisión.
