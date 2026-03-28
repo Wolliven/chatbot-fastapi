@@ -1,6 +1,10 @@
-[Session started: 2026-03-28 09:55:55]
+[Session started: 2026-03-28 12:48:48]
 
-[2026-03-28 09:56:43]
-Q: [gyudon_shop] こんにちは！
-A: こんにちは！ぎゅうどんショップへようこそ！何かお手伝いできることはありますか？
+[2026-03-28 12:49:04]
+Client: gyudon_shop
+Question: こんにちは
+Answer: こんにちは！gyudon_shopへようこそ。
+何かご不明な点がございましたら、お気軽にお尋ねください。
+Intent: qa
+State: True
 

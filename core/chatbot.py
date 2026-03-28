@@ -35,6 +35,27 @@ def load_information(client: str) -> str:
                 docs.append(f"{title}:\n{f.read().strip()}")
     return "\n\n".join(docs)
 
+def build_prompt(client: str, context: str, question: str) -> str:
+    return f"""You are a customer support assistant for the business "{client}".
+
+Rules:
+- Answer in the same language as the user.
+- Be polite, clear, and concise.
+- Use only the business information provided below.
+- Do not invent facts, prices, schedules, or policies.
+- If the information is missing, say you do not know.
+- If the user wants to make a reservation, do not confirm it unless the system has actually saved it.
+
+Business information:
+---
+{context}
+---
+
+User message:
+---
+{question}
+---
+"""
 
 def ask_bot(client: str, question: str) -> str:
     """
@@ -44,27 +65,7 @@ def ask_bot(client: str, question: str) -> str:
     try:
         context = load_information(client)
 
-        prompt = f"""
-        You are a customer support assistant for the business "{client}".
-
-        Rules:
-        - Answer in the same language as the user.
-        - Be polite, clear, and concise.
-        - Use only the business information provided below.
-        - Do not invent facts, prices, schedules, or policies.
-        - If the information is missing, say you do not know.
-        - If the user wants to make a reservation, do not confirm it unless the system has actually saved it.
-
-        Business information:
-        ---
-        {context}
-        ---
-
-        User message:
-        ---
-        {question}
-        ---
-    """
+        prompt = build_prompt(client=client, context=context, question=question)
 
         model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(
@@ -77,7 +78,7 @@ def ask_bot(client: str, question: str) -> str:
         if hasattr(response, "text") and response.text:
             answer = response.text.strip()
         else:
-            answer = "No se pudo generar una respuesta válida."
+            answer = "A valid response could not be generated."
 
         log_conversation(
             client=client,
@@ -89,5 +90,12 @@ def ask_bot(client: str, question: str) -> str:
         return answer
 
     except Exception as e:
-        print("❌ Error en ask_bot:", e)
-        return f"Sorry, an internal error ocurred, please try again."
+        print("❌ Error in ask_bot:", e)
+        log_conversation(
+            client=client,
+            question=question,
+            answer="internal_error",
+            intent="qa",
+            success=False
+        )
+        return "Sorry, an internal error occurred. Please try again."
