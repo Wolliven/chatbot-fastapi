@@ -45,31 +45,49 @@ def ask_bot(client: str, question: str) -> str:
         context = load_information(client)
 
         prompt = f"""
-Eres un asistente para el negocio '{client}'.
+        You are a customer support assistant for the business "{client}".
 
-Usa solo la siguiente información para responder con precisión.
-Si no hay datos relevantes, responde cortésmente que no lo sabes.
+        Rules:
+        - Answer in the same language as the user.
+        - Be polite, clear, and concise.
+        - Use only the business information provided below.
+        - Do not invent facts, prices, schedules, or policies.
+        - If the information is missing, say you do not know.
+        - If the user wants to make a reservation, do not confirm it unless the system has actually saved it.
 
-Información del negocio:
-{context}
+        Business information:
+        ---
+        {context}
+        ---
 
-Pregunta del cliente:
-{question}
-
-Always reply in the same language as the user's message. If they text in japanese, reply in japanese.
-"""
+        User message:
+        ---
+        {question}
+        ---
+    """
 
         model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(prompt)
+        response = model.generate_content(
+            prompt,
+            generation_config={
+                "temperature": 0.3,
+            }
+        )
 
         if hasattr(response, "text") and response.text:
             answer = response.text.strip()
         else:
             answer = "No se pudo generar una respuesta válida."
 
-        log_conversation(f"[{client}] {question}", answer)
+        log_conversation(
+            client=client,
+            question=question,
+            answer=answer,
+            intent="qa",
+            success=True
+        )
         return answer
 
     except Exception as e:
         print("❌ Error en ask_bot:", e)
-        return f"Error interno: {e}"
+        return f"Sorry, an internal error ocurred, please try again."
