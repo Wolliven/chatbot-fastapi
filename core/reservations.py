@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 from typing import Dict, Tuple, Optional
 import uuid
+from core.state import get_state, update_state, clear_state
 
 def save_reservation(client: str, reservation: dict):
     """Guarda la reserva en clients/<client>/data/reservations.json"""
@@ -31,16 +32,13 @@ def save_reservation(client: str, reservation: dict):
 #   Estado y flujo de reservas (LINE)
 # ==========================================
 
-# { user_id: { "step": "...", "data": {...}, "client": "gyudon_shop" } }
-user_states: Dict[str, dict] = {}
-
 
 def is_user_in_reservation_flow(user_id: str) -> bool:
-    return user_id in user_states
+    return bool(get_state(user_id))
 
 
 def start_reservation_flow_jp(user_id: str, client: str) -> str:
-    user_states[user_id] = {
+    update_state[user_id] = {
         "step": "ask_date",
         "data": {},
         "client": client,
@@ -60,7 +58,7 @@ def continue_reservation_flow_jp(user_id: str, user_text: str) -> Tuple[str, Opt
     戻り値:
       (reply_text, reservation_dict_or_None)
     """
-    state = user_states.get(user_id)
+    state = get_state(user_id)
     if not state:
         return "すみません、もう一度メニューから「予約」を選んでください。", None
 
@@ -124,7 +122,7 @@ def continue_reservation_flow_jp(user_id: str, user_text: str) -> Tuple[str, Opt
             # JSON に保存
             save_reservation(client_name, reservation)
             # 状態クリア
-            del user_states[user_id]
+            clear_state(user_id)
 
             reply_text = (
                 "✅ ご予約内容をお預かりしました。\n"
@@ -134,7 +132,7 @@ def continue_reservation_flow_jp(user_id: str, user_text: str) -> Tuple[str, Opt
             return reply_text, reservation
 
         elif text_norm in cancel_words:
-            del user_states[user_id]
+            clear_state(user_id)
             reply_text = (
                 "❌ ご予約をキャンセルしました。\n"
                 "また必要であればメニューからもう一度「予約」をお選びください。"
@@ -145,5 +143,5 @@ def continue_reservation_flow_jp(user_id: str, user_text: str) -> Tuple[str, Opt
             return "「はい」または「いいえ」でお答えください。", None
 
     else:
-        del user_states[user_id]
+        clear_state(user_id)
         return "すみません、エラーが発生しました。もう一度メニューから「予約」を選んでください。", None
