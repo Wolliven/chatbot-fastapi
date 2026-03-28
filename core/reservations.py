@@ -1,48 +1,75 @@
 import json
 import os
 from datetime import datetime
-from typing import Dict, Tuple, Optional
+from typing import Tuple, Optional
 import uuid
 from core.state import get_state, update_state, clear_state
+import re
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def save_reservation(client: str, reservation: dict):
-    """Guarda la reserva en clients/<client>/data/reservations.json"""
-    base_path = f"clients/{client}/data"
-    os.makedirs(base_path, exist_ok=True)
+    """Save a reservation to clients/<client>/data/reservations.json"""
+    base_path = os.path.join(BASE_DIR, "clients", client, "data")
+    if not os.path.isdir(base_path):
+        raise FileNotFoundError(f"Client data folder not found for '{client}'")
     file_path = os.path.join(base_path, "reservations.json")
 
-    # Cargar reservas previas
+    # Load previous reservations
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             try:
-                data = json.load(f)
+                reservation_data = json.load(f)
             except json.JSONDecodeError:
-                data = []
+                reservation_data = []
     else:
-        data = []
+        reservation_data = []
 
     reservation["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    data.append(reservation)
+    reservation_data.append(reservation)
 
     with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(reservation_data, f, ensure_ascii=False, indent=2)
 
 
 # ==========================================
-#   Estado y flujo de reservas (LINE)
+#   Reservation state and flow (LINE)
 # ==========================================
 
 
 def is_user_in_reservation_flow(user_id: str) -> bool:
     return bool(get_state(user_id))
 
+def is_valid_date(text: str) -> bool:
+    try:
+        datetime.strptime(text.strip(), "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
 
-def start_reservation_flow_jp(user_id: str, client: str) -> str:
-    update_state[user_id] = {
+def is_valid_time(text: str) -> bool:
+    try:
+        datetime.strptime(text.strip(), "%H:%M")
+        return True
+    except ValueError:
+        return False
+
+def parse_people_count(text: str) -> Optional[int]:
+    match = re.search(r"\d+", text)
+    if not match:
+        return None
+
+    people = int(match.group())
+    if people <= 0:
+        return None
+    return people
+
+def start_reservation_flow(user_id: str, client: str) -> str:
+    update_state(user_id, {
         "step": "ask_date",
-        "data": {},
+        "reservation_data": {},
         "client": client,
-    }
+    })
     return (
         "ご予約ですね。ありがとうございます！\n\n"
         "📅 ご希望の日付を教えてください。\n"
@@ -50,78 +77,96 @@ def start_reservation_flow_jp(user_id: str, client: str) -> str:
     )
 
 
-def continue_reservation_flow_jp(user_id: str, user_text: str) -> Tuple[str, Optional[dict]]:
+def continue_reservation_flow(user_id: str, user_text: str) -> Tuple[str, Optional[dict]]:
     """
-    現在のステップに応じてユーザーの入力を処理し、
-    次に送るメッセージと、オーナー通知用の予約情報(あれば)を返す。
-
-    戻り値:
-      (reply_text, reservation_dict_or_None)
+    Handles current state and user and takes date, time, number of people, name and confirmation.
     """
     state = get_state(user_id)
     if not state:
         return "すみません、もう一度メニューから「予約」を選んでください。", None
 
     step = state["step"]
-    data = state["data"]
+    reservation_data = state["reservation_data"]
 
-    # 1) 日付
+    # 1) Date
     if step == "ask_date":
-        data["date"] = user_text.strip()
+        date_text = user_text.strip()
+        if not is_valid_date(date_text):
+            return "日付は YYYY-MM-DD の形式で入力してください。\n（例：2025-12-24）", None
+        reservation_data["date"] = date_text
         state["step"] = "ask_time"
         return (
             "⏰ ご希望の時間を教えてください。\n"
             "（例：19:30）"
         ), None
 
-    # 2) 時間
+    # 2) Time
     elif step == "ask_time":
-        data["time"] = user_text.strip()
+        time_text = user_text.strip()
+        if not is_valid_time(time_text):
+            return "時間は HH:MM の形式で入力してください。\n（例：19:30）", None
+        reservation_data["time"] = time_text
         state["step"] = "ask_people"
         return (
             "👥 何名様でご利用予定でしょうか？\n"
             "（例：2名）"
         ), None
 
-    # 3) 人数
+
+    # 3) Number of people
     elif step == "ask_people":
-        data["people"] = user_text.strip()
+        people_text = user_text.strip()
+        people_count = parse_people_count(people_text)
+        if people_count is None:
+            return "人数は 数の形式で入力してください。\n（例：2名）", None
+        reservation_data["people"] = people_count
+        state["step"] = "ask_name"
+        return (
+            "👤 お名前をお伺いしてもよろしいでしょうか？\n"
+            "（例：山田 太郎）"
+        ), None
+    
+    # 4) Name
+    elif step == "ask_name":
+        reservation_data["name"] = user_text.strip()
         state["step"] = "confirm"
 
         return (
             "以下の内容でご予約をお預かりしてもよろしいですか？\n\n"
-            f"📅 日付: {data['date']}\n"
-            f"⏰ 時間: {data['time']}\n"
-            f"👥 人数: {data['people']}\n\n"
+            f"📅 日付: {reservation_data['date']}\n"
+            f"⏰ 時間: {reservation_data['time']}\n"
+            f"👥 人数: {reservation_data['people']}\n"
+            f"👤 名前: {reservation_data['name']}\n\n"
             "問題なければ「はい」と返信してください。\n"
             "キャンセルする場合は「いいえ」と送ってください。"
         ), None
 
-    # 4) 最終確認
+    # 5) Last confirmation
     elif step == "confirm":
         text_norm = user_text.strip().lower()
 
         ok_words = ["はい", "はい。", "ok", "okです", "yes", "y", "si", "sí"]
         cancel_words = ["いいえ", "いいえ。", "no", "キャンセル"]
 
-        # オーナー通知用の予約 dict（OK のときだけ埋める）
+        # Create reservation object
         if text_norm in ok_words:
             client_name = state["client"]
 
             reservation = {
                 "id": "R" + uuid.uuid4().hex[:8],
-                "date": data.get("date"),
-                "time": data.get("time"),
-                "people": data.get("people"),
+                "date": reservation_data.get("date"),
+                "time": reservation_data.get("time"),
+                "people": reservation_data.get("people"),
+                "name": reservation_data.get("name"),
                 "source": "line",
                 "status": "pending",
                 "user_id": user_id,
                 "client": client_name,
             }
 
-            # JSON に保存
+            # Save JSON
             save_reservation(client_name, reservation)
-            # 状態クリア
+            # Clear state
             clear_state(user_id)
 
             reply_text = (
