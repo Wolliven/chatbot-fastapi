@@ -5,15 +5,17 @@ from core.chatbot import ask_bot
 from core.utils import reset_log_if_needed
 import os, hmac, hashlib, base64, json, httpx
 from core.reservations import (
-    start_reservation_flow_jp,
-    continue_reservation_flow_jp,
+    start_reservation_flow,
+    continue_reservation_flow,
     is_user_in_reservation_flow,
 )
 
 import os, hmac, hashlib, base64, json, httpx
-from dotenv import load_dotenv  # 👈 añade esto
+from dotenv import load_dotenv
+from core.chatbot import configure_gemini
 
 load_dotenv()  # 👈 carga el .env desde el directorio actual
+configure_gemini()
 
 
 
@@ -64,6 +66,7 @@ async def notify_owner_of_reservation(http_client, reservation: dict):
         f"日付: {reservation.get('date')}\n"
         f"時間: {reservation.get('time')}\n"
         f"人数: {reservation.get('people')}\n"
+        f"名前: {reservation.get('name')}\n"
         f"ユーザーID: {reservation.get('user_id')}\n"
         "\n問題がある場合は、お客様にご連絡ください。"
     )
@@ -113,11 +116,11 @@ async def line_webhook(request: Request):
                 # Decidimos qué responder
                 # 1) Si el texto viene del botón de reserva → iniciar flujo
                 if user_text.strip() == RESERVATION_TRIGGER and user_id:
-                    reply_text = start_reservation_flow_jp(user_id, client_name)
+                    reply_text = start_reservation_flow(user_id, client_name)
 
                 # 2) Si el usuario ya está en el flujo de reserva → continuar
                 elif user_id and is_user_in_reservation_flow(user_id):
-                    reply_text, reservation = continue_reservation_flow_jp(user_id, user_text)
+                    reply_text, reservation = continue_reservation_flow(user_id, user_text)
 
                     # Si se ha creado una reserva nueva (confirmada), notificamos al dueño
                     if reservation is not None:
