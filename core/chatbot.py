@@ -6,15 +6,17 @@ from core.utils import log_conversation
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Cargar variables del entorno y configurar API
-load_dotenv()
-key = os.getenv("GEMINI_API_KEY")
+def configure_gemini() -> None:
+    # Cargar variables del entorno y configurar API
+    load_dotenv()
+    key = os.getenv("GEMINI_API_KEY")
+    if not key:
+        raise ValueError("GEMINI_API_KEY is not set")
 
-genai.configure(api_key=key)
-
-# fuerza limpieza de credenciales previas (importante en Windows)
-os.environ.pop("GOOGLE_API_KEY", None)
-os.environ["GOOGLE_API_KEY"] = key
+    # fuerza limpieza de credenciales previas (importante en Windows)
+    os.environ.pop("GOOGLE_API_KEY", None)
+    os.environ["GOOGLE_API_KEY"] = key
+    genai.configure(api_key=key)
 
 
 def detect_language(text: str) -> str:

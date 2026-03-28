@@ -11,9 +11,11 @@ from core.reservations import (
 )
 
 import os, hmac, hashlib, base64, json, httpx
-from dotenv import load_dotenv  # 👈 añade esto
+from dotenv import load_dotenv
+from core.chatbot import configure_gemini
 
 load_dotenv()  # 👈 carga el .env desde el directorio actual
+configure_gemini()
 
 
 
