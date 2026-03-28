@@ -18,29 +18,22 @@ def configure_gemini() -> None:
     os.environ["GOOGLE_API_KEY"] = key
     genai.configure(api_key=key)
 
-
-def detect_language(text: str) -> str:
-    """Detección mínima del idioma (es/en/ja)."""
-    if re.search(r'[\u3040-\u30ff\u4e00-\u9fff]', text):
-        return "ja"
-    if len(re.findall(r'[a-zA-Z]', text)) / max(len(text), 1) > 0.5:
-        return "en"
-    return "es"
-
-
 def load_information(client: str) -> str:
-    """Carga los archivos de datos (menu, schedule, faq) del cliente indicado."""
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+", client):
+        raise ValueError("Invalid client name")
+
     base_path = os.path.join(BASE_DIR, "clients", client, "data")
-    if not os.path.exists(base_path):
-        return f"No se encontró información para el cliente '{client}'."
+    if not os.path.isdir(base_path):
+        raise FileNotFoundError(f"Client data folder not found for '{client}'")
 
     docs = []
-    for filename in os.listdir(base_path):
+    for filename in sorted(os.listdir(base_path)):
         if filename.endswith(".txt"):
             path = os.path.join(base_path, filename)
             with open(path, "r", encoding="utf-8") as f:
-                docs.append(f"{filename.replace('.txt', '').capitalize()}:\n{f.read()}\n")
-    return "\n".join(docs)
+                title = filename.replace(".txt", "").capitalize()
+                docs.append(f"{title}:\n{f.read().strip()}")
+    return "\n\n".join(docs)
 
 
 def ask_bot(client: str, question: str) -> str:
@@ -51,22 +44,7 @@ def ask_bot(client: str, question: str) -> str:
     try:
         context = load_information(client)
 
-        # Detección de idioma
-        lang = detect_language(question)
-        lang_instruction = {
-            "es": "Responde en español, de forma natural y amable.",
-            "en": "Answer naturally in English, friendly and clear.",
-            "ja": "日本語で自然に丁寧に答えてください。",
-        }.get(lang, "Responde en español.")
-
-        # === Sistema preparado para detectar reservas (aún no activado) ===
-        # TODO: en el futuro activaremos esta parte con detección híbrida
-        # (regex + modelo Gemini para extracción de campos)
-        # Por ahora, simplemente ignora la detección y pasa al flujo normal.
-        # ------------------------------------------------------------------
-
         prompt = f"""
-Siempre responde en japonés, natural y cortés, a no ser que te escriban en otro idioma, en cuyo caso responde en ese idioma.
 Eres un asistente para el negocio '{client}'.
 
 Usa solo la siguiente información para responder con precisión.
@@ -77,6 +55,8 @@ Información del negocio:
 
 Pregunta del cliente:
 {question}
+
+Always reply in the same language as the user's message. If they text in japanese, reply in japanese.
 """
 
         model = genai.GenerativeModel("gemini-2.5-flash")
