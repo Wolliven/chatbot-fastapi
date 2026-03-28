@@ -66,6 +66,7 @@ async def notify_owner_of_reservation(http_client, reservation: dict):
         f"日付: {reservation.get('date')}\n"
         f"時間: {reservation.get('time')}\n"
         f"人数: {reservation.get('people')}\n"
+        f"名前: {reservation.get('name')}\n"
         f"ユーザーID: {reservation.get('user_id')}\n"
         "\n問題がある場合は、お客様にご連絡ください。"
     )

@@ -1,10 +1,2 @@
-[Session started: 2026-03-28 12:48:48]
-
-[2026-03-28 12:49:04]
-Client: gyudon_shop
-Question: こんにちは
-Answer: こんにちは！gyudon_shopへようこそ。
-何かご不明な点がございましたら、お気軽にお尋ねください。
-Intent: qa
-State: True
+[Session started: 2026-03-28 14:39:43]
 
