@@ -1,28 +1,33 @@
+import os
+import hmac
+import hashlib
+import base64
+import json
+
+import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from core.chatbot import ask_bot
+from contextlib import asynccontextmanager
+
+from core.chatbot import ask_bot, configure_gemini
 from core.utils import reset_log_if_needed
-import os, hmac, hashlib, base64, json, httpx
 from core.reservations import (
     start_reservation_flow,
     continue_reservation_flow,
     is_user_in_reservation_flow,
 )
 
-import os, hmac, hashlib, base64, json, httpx
-from dotenv import load_dotenv
-from core.chatbot import configure_gemini
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_dotenv()
+    configure_gemini()
+    reset_log_if_needed()
+    yield
+    print("App shutting down")
 
-load_dotenv()  # 👈 carga el .env desde el directorio actual
-configure_gemini()
-
-
-
-# Reiniciar log al arrancar el servidor
-reset_log_if_needed()
-
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
