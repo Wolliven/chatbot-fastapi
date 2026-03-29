@@ -10,10 +10,7 @@ from core.chatbot import ask_bot, configure_gemini
 from core.utils import reset_log_if_needed
 from core.line_handler import (
     verify_line_signature,
-    parse_line_text_event,
-    process_line_message,
-    notify_owner_of_reservation,
-    send_line_reply,
+    handle_line_event
 )
 
 @asynccontextmanager
@@ -58,30 +55,11 @@ async def line_webhook(request: Request):
             # Print the event when debugging new LINE event types or chat sources.
             # print(json.dumps(event, ensure_ascii=False, indent=2))
 
-            parsed_event = parse_line_text_event(event)
-            if parsed_event is None:
-                continue
-
-            reply_token = parsed_event["reply_token"]
-            user_text = parsed_event["user_text"]
-            user_id = parsed_event["user_id"]
-
-            # For now, keep the client fixed to gyudon_shop.
-            client_name = "gyudon_shop"
-
-            reply_text, reservation = process_line_message(
-                client_name=client_name,
-                user_id=user_id,
-                user_text=user_text,
+            await handle_line_event(
+                http_client=http_client,
+                event=event,
+                client_name="gyudon_shop",
             )
-
-            if reservation is not None:
-                try:
-                    await notify_owner_of_reservation(http_client, reservation)
-                except Exception as e:
-                    print("Error sending notification to owner:", e)
-
-            await send_line_reply(http_client, reply_token, reply_text)
 
 
     return {"status": "ok"}

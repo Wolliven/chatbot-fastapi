@@ -94,6 +94,33 @@ def process_line_message(client_name: str, user_id: str | None, user_text: str) 
 
     return answer, None
 
+async def handle_line_event(http_client, event: dict, client_name: str) -> None:
+    """
+    Handle one LINE event if it is a text message.
+    Ignore non-text events.
+    """
+    parsed_event = parse_line_text_event(event)
+    if parsed_event is None:
+        return
+
+    reply_token = parsed_event["reply_token"]
+    user_text = parsed_event["user_text"]
+    user_id = parsed_event["user_id"]
+
+    reply_text, reservation = process_line_message(
+        client_name=client_name,
+        user_id=user_id,
+        user_text=user_text,
+    )
+
+    if reservation is not None:
+        try:
+            await notify_owner_of_reservation(http_client, reservation)
+        except Exception as e:
+            print("Error sending notification to owner:", e)
+
+    await send_line_reply(http_client, reply_token, reply_text)
+
 async def send_line_reply(http_client, reply_token: str, reply_text: str):
     """
     Send a reply message back to the LINE user.
