@@ -10,6 +10,7 @@ from core.chatbot import ask_bot, configure_gemini
 from core.utils import reset_log_if_needed
 from core.line_handler import (
     verify_line_signature,
+    parse_line_text_event,
     process_line_message,
     notify_owner_of_reservation,
     send_line_reply,
@@ -54,31 +55,33 @@ async def line_webhook(request: Request):
 
     async with httpx.AsyncClient() as http_client:
         for event in events:
-            #Cada vez que se quiera añadir un grupo, poner aquí esta línea
-            #print(json.dumps(event, ensure_ascii=False, indent=2))
-            if event.get("type") == "message" and event["message"]["type"] == "text":
-                reply_token = event["replyToken"]
-                user_text = event["message"]["text"]
-                # userId を取得（1:1チャット前提）
-                user_id = event["source"].get("userId")
+            # Print the event when debugging new LINE event types or chat sources.
+            # print(json.dumps(event, ensure_ascii=False, indent=2))
 
-                # Por ahora, el cliente lo fijamos a gyudon_shop
-                client_name = "gyudon_shop"
+            parsed_event = parse_line_text_event(event)
+            if parsed_event is None:
+                continue
 
-                reply_text, reservation = process_line_message(
-                    client_name=client_name,
-                    user_id=user_id,
-                    user_text=user_text,
-                )
+            reply_token = parsed_event["reply_token"]
+            user_text = parsed_event["user_text"]
+            user_id = parsed_event["user_id"]
 
-                if reservation is not None:
-                    try:
-                        await notify_owner_of_reservation(http_client, reservation)
-                    except Exception as e:
-                        print("Error sending notification to owner:", e)
+            # For now, keep the client fixed to gyudon_shop.
+            client_name = "gyudon_shop"
 
-                # Enviar respuesta a LINE
-                await send_line_reply(http_client, reply_token, reply_text)
+            reply_text, reservation = process_line_message(
+                client_name=client_name,
+                user_id=user_id,
+                user_text=user_text,
+            )
+
+            if reservation is not None:
+                try:
+                    await notify_owner_of_reservation(http_client, reservation)
+                except Exception as e:
+                    print("Error sending notification to owner:", e)
+
+            await send_line_reply(http_client, reply_token, reply_text)
 
 
     return {"status": "ok"}

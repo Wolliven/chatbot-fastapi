@@ -46,11 +46,32 @@ async def notify_owner_of_reservation(http_client, reservation: dict):
     response.raise_for_status()
 
 
-
 def verify_line_signature(body: bytes, signature: str) -> bool:
     mac = hmac.new(LINE_CHANNEL_SECRET.encode(), body, hashlib.sha256).digest()
     expected = base64.b64encode(mac).decode()
     return hmac.compare_digest(expected, signature)
+
+
+def parse_line_text_event(event: dict) -> dict | None:
+    """
+    Extract the relevant data from a LINE text message event.
+    Return None if the event is not a text message.
+    """
+    if event.get("type") != "message":
+        return None
+
+    message = event.get("message", {})
+    if message.get("type") != "text":
+        return None
+
+    source = event.get("source", {})
+
+    return {
+        "reply_token": event.get("replyToken"),
+        "user_text": message.get("text", ""),
+        "user_id": source.get("userId"),
+    }
+
 
 def process_line_message(client_name: str, user_id: str | None, user_text: str) -> tuple[str, Optional[dict]]:
     """
