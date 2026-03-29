@@ -11,5 +11,5 @@ venv/
 # Variables de entorno
 .env
 
-logs/conversations.txt
+logs/
 clients/*/data/*.json

@@ -76,7 +76,7 @@ async def notify_owner_of_reservation(http_client, reservation: dict):
         "\n問題がある場合は、お客様にご連絡ください。"
     )
 
-    await http_client.post(
+    response = await http_client.post(
         "https://api.line.me/v2/bot/message/push",
         headers={
             "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
@@ -87,6 +87,7 @@ async def notify_owner_of_reservation(http_client, reservation: dict):
             "messages": [{"type": "text", "text": text}],
         },
     )
+    response.raise_for_status()
 
 
 
@@ -145,7 +146,7 @@ async def line_webhook(request: Request):
                     reply_text = answer
 
                 # Enviar respuesta a LINE
-                await client.post(
+                response = await client.post(
                     "https://api.line.me/v2/bot/message/reply",
                     headers={
                         "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}",
@@ -156,6 +157,7 @@ async def line_webhook(request: Request):
                         "messages": [{"type": "text", "text": reply_text}],
                     },
                 )
+                response.raise_for_status()
 
 
     return {"status": "ok"}
