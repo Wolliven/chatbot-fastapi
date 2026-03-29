@@ -4,7 +4,7 @@ import hashlib
 import base64
 from typing import Optional
 
-from core.chatbot import ask_bot
+from core.chatbot import process_message
 from core.reservations import (
     start_reservation_flow,
     continue_reservation_flow,
@@ -79,20 +79,23 @@ def process_line_message(client_name: str, user_id: str | None, user_text: str) 
     Returns:
         (reply_text, reservation_or_none)
     """
-    if user_text.strip() == RESERVATION_TRIGGER and user_id:
-        reply_text = start_reservation_flow(user_id, client_name)
-        return reply_text, None
-
     if user_id and is_user_in_reservation_flow(user_id):
         return continue_reservation_flow(user_id, user_text)
 
     try:
-        answer = ask_bot(client_name, user_text)
+        decision = process_message(client_name, user_text)
     except Exception as e:
-        print("Error en ask_bot:", e)
-        answer = "申し訳ありません。内部エラーが発生しました。"
+        print("Error in process_message:", e)
+        return "申し訳ありません。内部エラーが発生しました。", None
 
-    return answer, None
+    if decision.action == "reservation" and user_id:
+        reply_text = start_reservation_flow(user_id, client_name)
+        return reply_text, None
+
+    if decision.action == "chat" and decision.reply_text:
+        return decision.reply_text, None
+
+    return "申し訳ありません。うまく処理できませんでした。もう一度お試しください。", None
 
 async def handle_line_event(http_client, event: dict, client_name: str) -> None:
     """
