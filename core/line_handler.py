@@ -73,14 +73,14 @@ def parse_line_text_event(event: dict) -> dict | None:
     }
 
 
-def process_line_message(client_name: str, user_id: str | None, user_text: str) -> tuple[str, Optional[dict]]:
+def process_line_message(client_name: str, client_type: str, user_id: str | None, user_text: str) -> tuple[str, Optional[dict]]:
     """
     Decide how to handle an incoming LINE text message.
     Returns:
         (reply_text, reservation_or_none)
     """
     if user_id and is_user_in_reservation_flow(user_id):
-        return continue_reservation_flow(user_id, user_text)
+        return continue_reservation_flow(user_id, user_text, client_type)
 
     try:
         decision = process_message(client_name, user_text)
@@ -89,7 +89,7 @@ def process_line_message(client_name: str, user_id: str | None, user_text: str) 
         return "申し訳ありません。内部エラーが発生しました。", None
 
     if decision.action == "reservation" and user_id:
-        reply_text = start_reservation_flow(user_id, client_name)
+        reply_text = start_reservation_flow(user_id, client_name, client_type)
         return reply_text, None
 
     if decision.action == "chat" and decision.reply_text:
@@ -97,7 +97,7 @@ def process_line_message(client_name: str, user_id: str | None, user_text: str) 
 
     return "申し訳ありません。うまく処理できませんでした。もう一度お試しください。", None
 
-async def handle_line_event(http_client, event: dict, client_name: str) -> None:
+async def handle_line_event(http_client, event: dict, client_name: str, client_type: str = "restaurant") -> None:
     """
     Handle one LINE event if it is a text message.
     Ignore non-text events.
@@ -112,6 +112,7 @@ async def handle_line_event(http_client, event: dict, client_name: str) -> None:
 
     reply_text, reservation = process_line_message(
         client_name=client_name,
+        client_type=client_type,
         user_id=user_id,
         user_text=user_text,
     )

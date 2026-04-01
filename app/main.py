@@ -58,7 +58,8 @@ async def line_webhook(request: Request):
             await handle_line_event(
                 http_client=http_client,
                 event=event,
-                client_name="gyudon_shop",
+                client_name="Misky",
+                client_type="salon"
             )
 
 

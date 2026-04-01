@@ -64,7 +64,7 @@ def parse_people_count(text: str) -> Optional[int]:
         return None
     return people
 
-def start_reservation_flow(user_id: str, client: str) -> str:
+def start_reservation_flow(user_id: str, client: str, client_type: str = "restaurant") -> str:
     update_state(user_id, {
         "step": "ask_date",
         "reservation_data": {},
@@ -77,7 +77,7 @@ def start_reservation_flow(user_id: str, client: str) -> str:
     )
 
 
-def continue_reservation_flow(user_id: str, user_text: str) -> Tuple[str, Optional[dict]]:
+def continue_reservation_flow(user_id: str, user_text: str, client_type: str = "restaurant") -> Tuple[str, Optional[dict]]:
     """
     Handles current state and user and takes date, time, number of people, name and confirmation.
     """
@@ -106,11 +106,18 @@ def continue_reservation_flow(user_id: str, user_text: str) -> Tuple[str, Option
         if not is_valid_time(time_text):
             return "時間は HH:MM の形式で入力してください。\n（例：19:30）", None
         reservation_data["time"] = time_text
-        state["step"] = "ask_people"
-        return (
-            "👥 何名様でご利用予定でしょうか？\n"
-            "（例：2名）"
-        ), None
+        if client_type == "restaurant":
+            state["step"] = "ask_people"
+            return (
+                "👥 何名様でご利用予定でしょうか？\n"
+                "（例：2名）"
+            ), None
+        elif client_type == "salon":
+            state["step"] = "ask_name"
+            return (
+            "👤 お名前をお伺いしてもよろしいでしょうか？\n"
+            "（例：山田 太郎）"
+            ), None
 
 
     # 3) Number of people
@@ -131,11 +138,17 @@ def continue_reservation_flow(user_id: str, user_text: str) -> Tuple[str, Option
         reservation_data["name"] = user_text.strip()
         state["step"] = "confirm"
 
+        people_line = (
+            f"👥 人数: {reservation_data['people']}\n"
+            if reservation_data.get("people")
+            else ""
+        )
+
         return (
             "以下の内容でご予約をお預かりしてもよろしいですか？\n\n"
             f"📅 日付: {reservation_data['date']}\n"
             f"⏰ 時間: {reservation_data['time']}\n"
-            f"👥 人数: {reservation_data['people']}\n"
+            f"{people_line}"
             f"👤 名前: {reservation_data['name']}\n\n"
             "問題なければ「はい」と返信してください。\n"
             "キャンセルする場合は「いいえ」と送ってください。"

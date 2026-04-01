@@ -13,3 +13,4 @@ venv/
 
 logs/
 clients/*/data/*.json
+clients/Misky
