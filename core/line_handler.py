@@ -1,4 +1,3 @@
-
 import hmac
 import hashlib
 import base64
@@ -10,7 +9,22 @@ from core.reservations import (
     continue_reservation_flow,
     is_user_in_reservation_flow,
 )
+from core.state import set_user_client_type, get_user_client_type
 from core.config import LINE_OWNER_GROUP_ID, LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET, RESERVATION_TRIGGER
+
+# The following function is only for MVP purposes, delete in the future
+def parse_client_type_command(user_text: str) -> str | None:
+    """
+    Detect demo commands that switch the user's active client type.
+    """
+    normalized = user_text.strip().lower()
+
+    if normalized == "restaurant":
+        return "restaurant"
+    if normalized == "salon":
+        return "salon"
+
+    return None
 
 async def notify_owner_of_reservation(http_client, reservation: dict):
     """
@@ -73,14 +87,24 @@ def parse_line_text_event(event: dict) -> dict | None:
     }
 
 
-def process_line_message(client_name: str, client_type: str, user_id: str | None, user_text: str) -> tuple[str, Optional[dict]]:
+def process_line_message(client_name: str, user_id: str | None, user_text: str) -> tuple[str, Optional[dict]]:
     """
     Decide how to handle an incoming LINE text message.
     Returns:
         (reply_text, reservation_or_none)
     """
+    if user_id:
+        selected_client_type = get_user_client_type(user_id)
+
+        command_client_type = parse_client_type_command(user_text)
+        if command_client_type is not None:
+            set_user_client_type(user_id, command_client_type)
+            return f"Demo mode changed to {command_client_type}.", None
+    else:
+        selected_client_type = "restaurant"
+
     if user_id and is_user_in_reservation_flow(user_id):
-        return continue_reservation_flow(user_id, user_text, client_type)
+        return continue_reservation_flow(user_id, user_text, selected_client_type)
 
     try:
         decision = process_message(client_name, user_text)
@@ -89,7 +113,7 @@ def process_line_message(client_name: str, client_type: str, user_id: str | None
         return "申し訳ありません。内部エラーが発生しました。", None
 
     if decision.action == "reservation" and user_id:
-        reply_text = start_reservation_flow(user_id, client_name, client_type)
+        reply_text = start_reservation_flow(user_id, client_name, selected_client_type)
         return reply_text, None
 
     if decision.action == "chat" and decision.reply_text:
@@ -97,7 +121,7 @@ def process_line_message(client_name: str, client_type: str, user_id: str | None
 
     return "申し訳ありません。うまく処理できませんでした。もう一度お試しください。", None
 
-async def handle_line_event(http_client, event: dict, client_name: str, client_type: str = "restaurant") -> None:
+async def handle_line_event(http_client, event: dict, client_name: str) -> None:
     """
     Handle one LINE event if it is a text message.
     Ignore non-text events.
@@ -112,7 +136,6 @@ async def handle_line_event(http_client, event: dict, client_name: str, client_t
 
     reply_text, reservation = process_line_message(
         client_name=client_name,
-        client_type=client_type,
         user_id=user_id,
         user_text=user_text,
     )

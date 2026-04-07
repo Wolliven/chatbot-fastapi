@@ -59,7 +59,6 @@ async def line_webhook(request: Request):
                 http_client=http_client,
                 event=event,
                 client_name="Misky",
-                client_type="salon"
             )
 
 
