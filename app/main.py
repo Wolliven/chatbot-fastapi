@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
 
-from core.chatbot import ask_bot, configure_gemini
+from core.chatbot import ask_bot
+from core.llm import initialize_llm
 from core.utils import reset_log_if_needed
 from core.line_handler import (
     verify_line_signature,
@@ -15,7 +16,7 @@ from core.line_handler import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    configure_gemini()
+    initialize_llm()
     reset_log_if_needed()
     yield
     print("App shutting down")

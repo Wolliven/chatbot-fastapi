@@ -1,84 +1,75 @@
-🚀 Cómo probar el bot en local (entorno de desarrollo)
-1️⃣ Activar el entorno virtual
+# Desarrollo local
+
+## 1. Activar el entorno virtual
+
+```powershell
 cd C:\Users\jeric\Desktop\Proyectos\Proyecto_bot_api
 venv\Scripts\activate
+```
 
-2️⃣ Ejecutar el servidor FastAPI
-uvicorn app.main:app --reload --port 8000
+## 2. Variables `.env`
 
-3️⃣ Abrir la carpeta donde está ngrok (para exponer el puerto 8000)
-./ngrok http 8000
+Crea o actualiza `.env` con estas claves:
 
-
-Copia la URL HTTPS que aparezca (ej. https://abcd.ngrok-free.dev)
-
-En LINE Developers Console → Messaging API settings,
-pon esa URL como Webhook:
-
-https://abcd.ngrok-free.dev/line/webhook
-
-
-Asegúrate de que “Use webhook” está activado (ON).
-
-4️⃣ Probar el bot
-
-Abre LINE y mándale un mensaje al bot.
-
-Si todo está correcto, responderá según core/chatbot.py.
-
-5️⃣ Cerrar sesión
-
-Cuando termines de probar:
-
-Ctrl + C en la terminal de FastAPI.
-
-Ctrl + C en la terminal de ngrok.
-(Se cierran ambos servicios.)
-
-💾 Cómo volver a una versión anterior del proyecto en GitHub
-
-Ver el historial de commits:
-
-git log --oneline
-
-
-(te mostrará una lista tipo a1b2c3 Fix: ajustes en chatbot.py)
-
-Volver temporalmente a una versión anterior:
-
-git checkout a1b2c3
-
-
-(solo para inspeccionar o recuperar un archivo.)
-
-Volver a la rama principal:
-
-git checkout main
-
-
-Si rompiste algo y quieres “retroceder” definitivamente:
-
-git revert a1b2c3
-
-
-Esto crea un nuevo commit que deshace los cambios.
-
-🔑 Recordatorio sobre variables .env
-
-El archivo .env nunca se sube a GitHub (por seguridad).
-Si lo pierdes, crea uno nuevo con tus claves:
-
-GEMINI_API_KEY=...
+```env
 LINE_CHANNEL_SECRET=...
 LINE_CHANNEL_ACCESS_TOKEN=...
+LINE_OWNER_GROUP_ID=...
 
+LLM_PROVIDER=gemini
 
-Y guarda una copia aparte en un bloc de notas local.
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.5-flash
 
-🧠 Checklist rápido antes de cada prueba
-Elemento	Verificación
-.env	existe y tiene tus claves
-uvicorn	corriendo sin errores
-ngrok	abierto y con URL HTTPS activa
-LINE webhook	actualizado con esa URL
-modo descanso	desactivado mientras pruebas
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=gemma3:4b
+OLLAMA_TIMEOUT_SECONDS=60
+```
+
+Notas:
+
+- Si usas `LLM_PROVIDER=gemini`, necesitas `GEMINI_API_KEY`.
+- Si usas `LLM_PROVIDER=ollama`, necesitas tener Ollama corriendo en la URL configurada.
+- Cambiar el proveedor solo requiere cambiar variables y reiniciar el servidor.
+
+## 3. Ejecutar FastAPI
+
+```powershell
+uvicorn app.main:app --reload --port 8000
+```
+
+## 4. Exponer el puerto con ngrok
+
+```powershell
+./ngrok http 8000
+```
+
+Copia la URL HTTPS y configuralo en LINE Developers Console:
+
+```text
+https://TU-URL.ngrok-free.dev/line/webhook
+```
+
+Activa `Use webhook`.
+
+## 5. Probar el bot
+
+- Abre LINE y envia un mensaje al bot.
+- Tambien puedes probar el endpoint local:
+
+```powershell
+curl -X POST http://127.0.0.1:8000/ask `
+  -H "Content-Type: application/json" `
+  -d "{\"client\":\"Misky\",\"question\":\"Hello\"}"
+```
+
+## 6. Verificacion rapida
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+## 7. Cerrar la sesion
+
+- `Ctrl + C` en la terminal de FastAPI.
+- `Ctrl + C` en la terminal de ngrok.

@@ -4,11 +4,10 @@ import re
 from datetime import datetime
 from typing import Literal, Optional
 
-import google.generativeai as genai
-from dotenv import load_dotenv
 from pydantic import BaseModel, ValidationError
 from zoneinfo import ZoneInfo
 
+from core.llm import get_llm_client
 from core.utils import log_conversation
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,17 +24,6 @@ class MessageDecision(BaseModel):
     action: Literal["chat", "reservation"]
     reply_text: Optional[str] = None
     reservation: Optional[ReservationData] = None
-
-
-def configure_gemini() -> None:
-    load_dotenv()
-    key = os.getenv("GEMINI_API_KEY")
-    if not key:
-        raise ValueError("GEMINI_API_KEY is not set")
-
-    os.environ.pop("GOOGLE_API_KEY", None)
-    os.environ["GOOGLE_API_KEY"] = key
-    genai.configure(api_key=key)
 
 
 def load_information(client: str) -> str:
@@ -114,7 +102,7 @@ User message:
 
 def process_message(client: str, user_message: str) -> MessageDecision:
     """
-    Process one user message with a single Gemini call.
+    Process one user message with a single LLM call.
 
     Returns:
         MessageDecision:
@@ -124,16 +112,11 @@ def process_message(client: str, user_message: str) -> MessageDecision:
     try:
         context = load_information(client)
         prompt = build_prompt(client=client, context=context, user_message=user_message)
-
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        response = model.generate_content(
+        raw_text = get_llm_client().generate(
             prompt,
-            generation_config={
-                "temperature": 0.2,
-            },
+            temperature=0.2,
+            json_mode=True,
         )
-
-        raw_text = response.text.strip() if hasattr(response, "text") and response.text else ""
         data = json.loads(raw_text)
         decision = MessageDecision.model_validate(data)
 
@@ -147,7 +130,7 @@ def process_message(client: str, user_message: str) -> MessageDecision:
         return decision
 
     except (json.JSONDecodeError, ValidationError) as e:
-        print("❌ Structured output error in process_message:", e)
+        print("Structured output error in process_message:", e)
         log_conversation(
             client=client,
             question=user_message,
@@ -162,7 +145,7 @@ def process_message(client: str, user_message: str) -> MessageDecision:
         )
 
     except Exception as e:
-        print("❌ Error in process_message:", e)
+        print("Error in process_message:", e)
         log_conversation(
             client=client,
             question=user_message,
